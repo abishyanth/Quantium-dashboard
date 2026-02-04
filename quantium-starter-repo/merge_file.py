@@ -18,9 +18,8 @@ for file in files:
     df["price"] = df["price"].str.replace("$", "", regex=False).astype(float)
     df["Sales"] = df["quantity"] * df["price"]
 
-    df = df[["Sales", "date", "region"]]
-
-    df.rename(columns={'date': 'Date', 'region': 'Region'}, inplace = True)
+    df = df[["Sales", "quantity", "price", "date", "region"]]
+    df.rename(columns={"date": "Date", "region": "Region", "quantity": "Quantity", "price": "Price"}, inplace=True)
 
     processed_dfs.append(df)
 
