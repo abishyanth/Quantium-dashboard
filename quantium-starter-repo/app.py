@@ -11,6 +11,12 @@ daily_sales = (
     .sort_values("Date")
 )
 
+# Derive unique regions for the region picker if the column exists
+if "Region" in df.columns:
+    regions = sorted(df["Region"].dropna().unique())
+else:
+    regions = []
+
 price_increase_date = pd.to_datetime("2021-01-15")
 price_increase_str = "2021-01-15"
 before_increase = daily_sales[daily_sales["Date"] < price_increase_date]["Sales"].sum()
@@ -131,6 +137,7 @@ app.layout = html.Div(
                     children=[
                         html.H1(
                             "Soul Foods · Pink Morsels",
+                            id="main-header",
                             style={
                                 "fontSize": "28px",
                                 "fontWeight": "700",
@@ -176,7 +183,53 @@ app.layout = html.Div(
                         "border": "1px solid #f1f5f9",
                         "marginBottom": "32px",
                     },
-                    children=[dcc.Graph(figure=fig, config={"displayModeBar": True, "displaylogo": False})]
+                    children=[
+                        html.Div(
+                            style={
+                                "display": "flex",
+                                "justifyContent": "space-between",
+                                "alignItems": "center",
+                                "marginBottom": "16px",
+                                "gap": "12px",
+                                "flexWrap": "wrap",
+                            },
+                            children=[
+                                html.H2(
+                                    "Sales over time",
+                                    style={
+                                        "fontSize": "18px",
+                                        "fontWeight": "600",
+                                        "color": "#0f172a",
+                                        "margin": 0,
+                                    },
+                                ),
+                                dcc.Dropdown(
+                                    id="region-picker",
+                                    options=(
+                                        [
+                                            {"label": region, "value": region}
+                                            for region in regions
+                                        ]
+                                        if regions
+                                        else [
+                                            {"label": "All regions", "value": "ALL"}
+                                        ]
+                                    ),
+                                    value=regions[0] if regions else "ALL",
+                                    clearable=False,
+                                    style={
+                                        "minWidth": "220px",
+                                        "fontSize": "13px",
+                                    },
+                                ),
+                            ],
+                        ),
+                        dcc.Graph(
+                            id="sales-graph",
+                            figure=fig,
+                            config={"displayModeBar": True, "displaylogo": False},
+                        ),
+                    ]
                 ),
                 html.Div(
                     children=[

@@ -1,9 +1,33 @@
 import pandas as pd
 from dash import Dash, dcc, html, Input, Output
 import plotly.graph_objects as go
+import json
+import time
 
 df = pd.read_csv("pink_morsels_sales.csv")
 df["Date"] = pd.to_datetime(df["Date"])
+
+
+# #region agent log helper
+def _agent_log(hypothesis_id, location, message, data=None, run_id="pre-fix"):
+    entry = {
+        "sessionId": "debug-session",
+        "runId": run_id,
+        "hypothesisId": hypothesis_id,
+        "location": location,
+        "message": message,
+        "data": data or {},
+        "timestamp": int(time.time() * 1000),
+    }
+    try:
+        with open(r"d:\projects\Quantium_soul_foods_dashboard\.cursor\debug.log", "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry) + "\n")
+    except Exception:
+        # Logging must never break the app
+        pass
+
+
+# #endregion
 
 price_increase_date = pd.to_datetime("2021-01-15")
 price_increase_str = "2021-01-15"
@@ -40,6 +64,7 @@ app.layout = html.Div(
                     children=[
                         html.H1(
                             "Soul Foods · Pink Morsels",
+                            id="main-header",
                             style={"fontSize": "28px","fontWeight": "700","color": "#0f172a","letterSpacing": "-0.02em","marginBottom": "8px",},
                         ),
                         html.P(
@@ -199,16 +224,48 @@ def _chart_layout(yaxis_overrides=None):
     Input("region-filter", "value"),
 )
 def update_dashboard(region):
+    # #region agent log
+    _agent_log(
+        hypothesis_id="H1",
+        location="sales_visulaizers.update_dashboard:entry",
+        message="Callback entry",
+        data={"region": region},
+    )
+    # #endregion
+
     if region == "all":
         filtered_df = df.copy()
+        branch = "all"
     else:
         filtered_df = df[df["Region"].str.lower() == region]
+        branch = "filtered"
+
+    # #region agent log
+    _agent_log(
+        hypothesis_id="H1",
+        location="sales_visulaizers.update_dashboard:after_filter",
+        message="After region filter",
+        data={"branch": branch, "filtered_rows": int(len(filtered_df))},
+    )
+    # #endregion
 
     daily_sales = (
         filtered_df.groupby("Date", as_index=False)
         .agg({"Sales": "sum", "Quantity": "sum"})
         .sort_values("Date")
     )
+
+    # #region agent log
+    _agent_log(
+        hypothesis_id="H2",
+        location="sales_visulaizers.update_dashboard:after_groupby",
+        message="After groupby",
+        data={
+            "daily_rows": int(len(daily_sales)),
+            "columns": list(daily_sales.columns),
+        },
+    )
+    # #endregion
 
     before = daily_sales[daily_sales["Date"] < price_increase_date]["Sales"].sum()
     after = daily_sales[daily_sales["Date"] >= price_increase_date]["Sales"].sum()
@@ -217,6 +274,22 @@ def update_dashboard(region):
 
     before_qty = int(filtered_df[filtered_df["Date"] < price_increase_date]["Quantity"].sum())
     after_qty = int(filtered_df[filtered_df["Date"] >= price_increase_date]["Quantity"].sum())
+
+    # #region agent log
+    _agent_log(
+        hypothesis_id="H3",
+        location="sales_visulaizers.update_dashboard:before_return",
+        message="Computed aggregates",
+        data={
+            "total_sales": float(total_sales),
+            "before_sales": float(before),
+            "after_sales": float(after),
+            "total_quantity": total_quantity,
+            "before_qty": before_qty,
+            "after_qty": after_qty,
+        },
+    )
+    # #endregion
 
     # Sales chart
     fig_sales = go.Figure()
